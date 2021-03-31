@@ -821,6 +821,7 @@ vendor/lib64/libqtikeymaster4.so|8d0028fe8b32b7636f1f2cd1f6990333a5229978
 # Listen
 vendor/lib/libadpcmdec.so
 vendor/lib/libcapiv2svacnn.so
+vendor/lib/libcapiv2svarnn.so
 vendor/lib/libcapiv2vop.so
 vendor/lib/libgcs-calwrapper.so
 vendor/lib/libgcs-ipc.so
