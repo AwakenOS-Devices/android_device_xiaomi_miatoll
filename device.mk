@@ -272,14 +272,15 @@ PRODUCT_PACKAGES += \
 
 # Init
 PRODUCT_PACKAGES += \
+    fstab.qcom \
     init.device.rc \
+    init.miatoll.perf.rc \
     init.qcom.early_boot.sh \
     init.qcom.power.rc \
     init.qcom.rc \
     init.qcom.sh \
     init.qti.chg_policy.sh \
     init.target.rc \
-    fstab.qcom \
     ueventd.qcom.rc
 
 PRODUCT_COPY_FILES += \
