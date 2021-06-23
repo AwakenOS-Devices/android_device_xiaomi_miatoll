@@ -358,6 +358,11 @@ PRODUCT_SOONG_NAMESPACES += \
     hardware/xiaomi \
     vendor/qcom/opensource/commonsys-intf/display
 
+# SOC Properties
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.soc.manufacturer=QTI \
+    ro.soc.model=SM6250
+
 # Telephony
 PRODUCT_PACKAGES += \
     ims-ext-common \
