@@ -16,11 +16,5 @@
         "repository":   "BladeRunner-A2C/vendor_xiaomi_miatoll",
         "target_path":  "vendor/xiaomi/miatoll",
         "branch":       "triton"
-    },
-    {
-        "remote":       "github",
-        "repository":   "LineageOS/android_hardware_xiaomi",
-        "target_path":  "hardware/xiaomi",
-        "branch":       "lineage-19.1"
     }
 ]
