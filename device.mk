@@ -528,12 +528,6 @@ PRODUCT_VENDOR_PROPERTIES += \
     persist.vendor.sensors.enable.mag_filter=true \
     persist.vendor.sensors.allow_non_default_discovery=true
 
-# Servicetracker
-PRODUCT_PACKAGES += \
-    vendor.qti.hardware.servicetracker@1.0.vendor \
-    vendor.qti.hardware.servicetracker@1.1.vendor \
-    vendor.qti.hardware.servicetracker@1.2.vendor
-
 # Shipping API
 PRODUCT_SHIPPING_API_LEVEL := 29
 
