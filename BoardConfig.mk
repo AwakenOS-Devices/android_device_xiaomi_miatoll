@@ -207,9 +207,9 @@ OVERRIDE_RS_DRIVER := libRSDriver_adreno.so
 ENABLE_VENDOR_RIL_SERVICE := true
 
 # Selinux
-include device/qcom/sepolicy_vndr/SEPolicy.mk
+include device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy_vndr/SEPolicy.mk
 
-BOARD_VENDOR_SEPOLICY_DIRS += \
+BOARD_SEPOLICY_DIRS += \
     $(DEVICE_PATH)/sepolicy/vendor
 
 # Security patch level
