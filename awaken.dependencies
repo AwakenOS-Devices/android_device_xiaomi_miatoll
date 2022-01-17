@@ -13,8 +13,20 @@
     },
     {
         "remote":       "github",
-        "repository":   "LineageOS/android_hardware_xiaomi",
+        "repository":   "PixelExperience/hardware_xiaomi",
         "target_path":  "hardware/xiaomi",
-        "branch":       "lineage-18.1"
+        "branch":       "twelve"
+    },
+    {
+        "remote":       "github",
+        "repository":   "PixelExperience/device_qcom_sepolicy"
+	"target_path":  "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy"
+        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
+    },
+    {
+        "remote": "github",
+        "repository":   "PixelExperience/device_qcom_sepolicy_vndr"
+        "target_path": "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy_vndr"
+        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
     }
 ]
