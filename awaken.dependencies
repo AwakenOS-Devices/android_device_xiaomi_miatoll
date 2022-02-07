@@ -1,15 +1,15 @@
 [
     {
         "remote":       "github",
-        "repository":   "BladeRunner-A2C/msm-4.14-miatoll",
-        "target_path":  "kernel/xiaomi/miatoll",
-        "branch":       "sapphire"
+        "repository":   "PixelExperience/device_qcom_sepolicy"
+	"target_path":  "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy"
+        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
     },
     {
         "remote":       "github",
-        "repository":   "kdrag0n/proton-clang",
-        "target_path":  "prebuilts/clang/host/linux-x86/clang-proton",
-        "branch":       "master"
+        "repository":   "PixelExperience/device_qcom_sepolicy_vndr"
+        "target_path":  "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy_vndr"
+        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
     },
     {
         "remote":       "github",
@@ -19,14 +19,14 @@
     },
     {
         "remote":       "github",
-        "repository":   "PixelExperience/device_qcom_sepolicy"
-	"target_path":  "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy"
-        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
+        "repository":   "BladeRunner-A2C/msm-4.14-miatoll",
+        "target_path":  "kernel/xiaomi/miatoll",
+        "branch":       "sapphire"
     },
     {
-        "remote": "github",
-        "repository":   "PixelExperience/device_qcom_sepolicy_vndr"
-        "target_path": "device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy_vndr"
-        "branch":       "twelve-LA.UM.10.3.r1-xxxxx-sdm845.0"
+        "remote":       "github",
+        "repository":   "kdrag0n/proton-clang",
+        "target_path":  "prebuilts/clang/host/linux-x86/clang-proton",
+        "branch":       "master"
     }
 ]
