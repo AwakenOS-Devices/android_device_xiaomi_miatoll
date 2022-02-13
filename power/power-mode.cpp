@@ -22,10 +22,10 @@
 namespace {
 int open_ts_input() {
     int fd = -1;
-    DIR *dir = opendir("/dev/input");
+    DIR* dir = opendir("/dev/input");
 
     if (dir != NULL) {
-        struct dirent *ent;
+        struct dirent* ent;
 
         while ((ent = readdir(dir)) != NULL) {
             if (ent->d_type == DT_CHR) {
@@ -66,7 +66,7 @@ static constexpr int kInputEventWakeupModeOn = 5;
 
 using ::aidl::android::hardware::power::Mode;
 
-bool isDeviceSpecificModeSupported(Mode type, bool *_aidl_return) {
+bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return) {
     switch (type) {
         case Mode::DOUBLE_TAP_TO_WAKE:
             *_aidl_return = true;
@@ -81,8 +81,8 @@ bool setDeviceSpecificMode(Mode type, bool enabled) {
         case Mode::DOUBLE_TAP_TO_WAKE: {
             int fd = open_ts_input();
             if (fd == -1) {
-                LOG(WARNING)
-                    << "DT2W won't work because no supported touchscreen input devices were found";
+                LOG(WARNING) << "DT2W won't work because no supported touchscreen input devices "
+                                "were found";
                 return false;
             }
             struct input_event ev;

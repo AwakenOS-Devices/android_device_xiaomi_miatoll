@@ -36,7 +36,7 @@ static int shutdown() {
     return 1;
 }
 
-int main(int /* argc */, char ** /* argv */) {
+int main(int /* argc */, char** /* argv */) {
     android::base::SetDefaultTag(kThermalLogTag.data());
     status_t status;
     android::sp<IThermal> service = nullptr;

@@ -69,12 +69,12 @@ using TemperatureType_2_0 = ::android::hardware::thermal::V2_0::TemperatureType;
 using ::android::hardware::thermal::V2_0::TemperatureThreshold;
 using ::android::hardware::thermal::V2_0::ThrottlingSeverity;
 
-using NotificationCallback = std::function<void(const Temperature_2_0 &t)>;
+using NotificationCallback = std::function<void(const Temperature_2_0& t)>;
 using NotificationTime = std::chrono::time_point<std::chrono::steady_clock>;
 using CdevRequestStatus = std::unordered_map<std::string, int>;
 
 // Get thermal_zone type
-bool getThermalZoneTypeById(int tz_id, std::string *);
+bool getThermalZoneTypeById(int tz_id, std::string*);
 
 struct SensorStatus {
     ThrottlingSeverity severity;
@@ -94,10 +94,10 @@ class PowerHalService {
     ~PowerHalService() = default;
     bool connect();
     bool isAidlPowerHalExist() { return power_hal_aidl_exist_; }
-    bool isModeSupported(const std::string &type, const ThrottlingSeverity &t);
+    bool isModeSupported(const std::string& type, const ThrottlingSeverity& t);
     bool isPowerHalConnected() { return power_hal_aidl_ != nullptr; }
     bool isPowerHalExtConnected() { return power_hal_ext_aidl_ != nullptr; }
-    void setMode(const std::string &type, const ThrottlingSeverity &t, const bool &enable);
+    void setMode(const std::string& type, const ThrottlingSeverity& t, const bool& enable);
 
   private:
     bool power_hal_aidl_exist_;
@@ -108,106 +108,106 @@ class PowerHalService {
 
 class ThermalHelper {
   public:
-    explicit ThermalHelper(const NotificationCallback &cb);
+    explicit ThermalHelper(const NotificationCallback& cb);
     ~ThermalHelper() = default;
 
-    bool fillTemperatures(hidl_vec<Temperature_1_0> *temperatures) const;
+    bool fillTemperatures(hidl_vec<Temperature_1_0>* temperatures) const;
     bool fillCurrentTemperatures(bool filterType, TemperatureType_2_0 type,
-                                 hidl_vec<Temperature_2_0> *temperatures) const;
+                                 hidl_vec<Temperature_2_0>* temperatures) const;
     bool fillTemperatureThresholds(bool filterType, TemperatureType_2_0 type,
-                                   hidl_vec<TemperatureThreshold> *thresholds) const;
+                                   hidl_vec<TemperatureThreshold>* thresholds) const;
     bool fillCurrentCoolingDevices(bool filterType, CoolingType type,
-                                   hidl_vec<CoolingDevice_2_0> *coolingdevices) const;
-    bool fillCpuUsages(hidl_vec<CpuUsage> *cpu_usages) const;
+                                   hidl_vec<CoolingDevice_2_0>* coolingdevices) const;
+    bool fillCpuUsages(hidl_vec<CpuUsage>* cpu_usages) const;
 
     // Dissallow copy and assign.
-    ThermalHelper(const ThermalHelper &) = delete;
-    void operator=(const ThermalHelper &) = delete;
+    ThermalHelper(const ThermalHelper&) = delete;
+    void operator=(const ThermalHelper&) = delete;
 
     bool isInitializedOk() const { return is_initialized_; }
 
     // Read the temperature of a single sensor.
-    bool readTemperature(std::string_view sensor_name, Temperature_1_0 *out,
+    bool readTemperature(std::string_view sensor_name, Temperature_1_0* out,
                          bool is_virtual_sensor = false) const;
     bool readTemperature(
-            std::string_view sensor_name, Temperature_2_0 *out,
-            std::pair<ThrottlingSeverity, ThrottlingSeverity> *throtting_status = nullptr,
+            std::string_view sensor_name, Temperature_2_0* out,
+            std::pair<ThrottlingSeverity, ThrottlingSeverity>* throtting_status = nullptr,
             bool is_virtual_sensor = false) const;
-    bool readTemperatureThreshold(std::string_view sensor_name, TemperatureThreshold *out) const;
+    bool readTemperatureThreshold(std::string_view sensor_name, TemperatureThreshold* out) const;
     // Read the value of a single cooling device.
-    bool readCoolingDevice(std::string_view cooling_device, CoolingDevice_2_0 *out) const;
+    bool readCoolingDevice(std::string_view cooling_device, CoolingDevice_2_0* out) const;
     // Get SensorInfo Map
-    const std::unordered_map<std::string, SensorInfo> &GetSensorInfoMap() const {
+    const std::unordered_map<std::string, SensorInfo>& GetSensorInfoMap() const {
         return sensor_info_map_;
     }
     // Get CdevInfo Map
-    const std::unordered_map<std::string, CdevInfo> &GetCdevInfoMap() const {
+    const std::unordered_map<std::string, CdevInfo>& GetCdevInfoMap() const {
         return cooling_device_info_map_;
     }
     // Get PowerRailInfo Map
-    const std::unordered_map<std::string, PowerRailInfo> &GetPowerRailInfoMap() const {
+    const std::unordered_map<std::string, PowerRailInfo>& GetPowerRailInfoMap() const {
         return power_rail_info_map_;
     }
     // Get SensorStatus Map
-    const std::unordered_map<std::string, SensorStatus> &GetSensorStatusMap() const {
+    const std::unordered_map<std::string, SensorStatus>& GetSensorStatusMap() const {
         std::shared_lock<std::shared_mutex> _lock(sensor_status_map_mutex_);
         return sensor_status_map_;
     }
     // Get CdevStatus Map
-    const std::unordered_map<std::string, CdevRequestStatus> &GetCdevStatusMap() const {
+    const std::unordered_map<std::string, CdevRequestStatus>& GetCdevStatusMap() const {
         std::shared_lock<std::shared_mutex> _lock(cdev_status_map_mutex_);
         return cdev_status_map_;
     }
     // Get ThrottlingRelease Map
-    const std::unordered_map<std::string, CdevReleaseStatus> &GetThrottlingReleaseMap() const {
+    const std::unordered_map<std::string, CdevReleaseStatus>& GetThrottlingReleaseMap() const {
         return power_files_.GetThrottlingReleaseMap();
     }
 
     // Get PowerStatus Map
-    const std::unordered_map<std::string, PowerStatusMap> &GetPowerStatusMap() const {
+    const std::unordered_map<std::string, PowerStatusMap>& GetPowerStatusMap() const {
         return power_files_.GetPowerStatusMap();
     }
 
-    void sendPowerExtHint(const Temperature_2_0 &t);
+    void sendPowerExtHint(const Temperature_2_0& t);
     bool isAidlPowerHalExist() { return power_hal_service_.isAidlPowerHalExist(); }
     bool isPowerHalConnected() { return power_hal_service_.isPowerHalConnected(); }
     bool isPowerHalExtConnected() { return power_hal_service_.isPowerHalExtConnected(); }
 
   private:
-    bool initializeSensorMap(const std::unordered_map<std::string, std::string> &path_map);
-    bool initializeCoolingDevices(const std::unordered_map<std::string, std::string> &path_map);
-    void setMinTimeout(SensorInfo *sensor_info);
-    void initializeTrip(const std::unordered_map<std::string, std::string> &path_map,
-                        std::set<std::string> *monitored_sensors, bool thermal_genl_enabled);
+    bool initializeSensorMap(const std::unordered_map<std::string, std::string>& path_map);
+    bool initializeCoolingDevices(const std::unordered_map<std::string, std::string>& path_map);
+    void setMinTimeout(SensorInfo* sensor_info);
+    void initializeTrip(const std::unordered_map<std::string, std::string>& path_map,
+                        std::set<std::string>* monitored_sensors, bool thermal_genl_enabled);
 
     // For thermal_watcher_'s polling thread, return the sleep interval
     std::chrono::milliseconds thermalWatcherCallbackFunc(
-            const std::set<std::string> &uevent_sensors);
+            const std::set<std::string>& uevent_sensors);
     // Return hot and cold severity status as std::pair
     std::pair<ThrottlingSeverity, ThrottlingSeverity> getSeverityFromThresholds(
-        const ThrottlingArray &hot_thresholds, const ThrottlingArray &cold_thresholds,
-        const ThrottlingArray &hot_hysteresis, const ThrottlingArray &cold_hysteresis,
-        ThrottlingSeverity prev_hot_severity, ThrottlingSeverity prev_cold_severity,
-        float value) const;
-    bool checkVirtualSensor(std::string_view sensor_name, std::string *temp) const;
+            const ThrottlingArray& hot_thresholds, const ThrottlingArray& cold_thresholds,
+            const ThrottlingArray& hot_hysteresis, const ThrottlingArray& cold_hysteresis,
+            ThrottlingSeverity prev_hot_severity, ThrottlingSeverity prev_cold_severity,
+            float value) const;
+    bool checkVirtualSensor(std::string_view sensor_name, std::string* temp) const;
 
     // Return the target state of PID algorithm
-    size_t getTargetStateOfPID(const SensorInfo &sensor_info, const SensorStatus &sensor_status);
+    size_t getTargetStateOfPID(const SensorInfo& sensor_info, const SensorStatus& sensor_status);
     // Return the power budget which is computed by PID algorithm
-    float pidPowerCalculator(const Temperature_2_0 &temp, const SensorInfo &sensor_info,
-                             SensorStatus *sensor_status,
+    float pidPowerCalculator(const Temperature_2_0& temp, const SensorInfo& sensor_info,
+                             SensorStatus* sensor_status,
                              const std::chrono::milliseconds time_elapsed_ms, size_t target_state);
     bool connectToPowerHal();
     void updateSupportedPowerHints();
-    bool requestCdevByPower(std::string_view sensor_name, SensorStatus *sensor_status,
-                            const SensorInfo &sensor_info, float total_power_budget,
+    bool requestCdevByPower(std::string_view sensor_name, SensorStatus* sensor_status,
+                            const SensorInfo& sensor_info, float total_power_budget,
                             size_t target_state);
-    void requestCdevBySeverity(std::string_view sensor_name, SensorStatus *sensor_status,
-                               const SensorInfo &sensor_info);
-    void computeCoolingDevicesRequest(std::string_view sensor_name, const SensorInfo &sensor_info,
-                                      const SensorStatus &sensor_status,
-                                      std::vector<std::string> *cooling_devices_to_update);
-    void updateCoolingDevices(const std::vector<std::string> &cooling_devices_to_update);
+    void requestCdevBySeverity(std::string_view sensor_name, SensorStatus* sensor_status,
+                               const SensorInfo& sensor_info);
+    void computeCoolingDevicesRequest(std::string_view sensor_name, const SensorInfo& sensor_info,
+                                      const SensorStatus& sensor_status,
+                                      std::vector<std::string>* cooling_devices_to_update);
+    void updateCoolingDevices(const std::vector<std::string>& cooling_devices_to_update);
     sp<ThermalWatcher> thermal_watcher_;
     PowerFiles power_files_;
     ThermalFiles thermal_sensors_;
