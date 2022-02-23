@@ -199,7 +199,7 @@ TARGET_SCREEN_DENSITY := 420
 VENDOR_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
 
 # Selinux
-include device/qcom-LA.UM.10.3.r1-xxxxx-sdm845.0/sepolicy_vndr/SEPolicy.mk
+include device/qcom/sepolicy_vndr/SEPolicy.mk
 
 BOARD_SEPOLICY_DIRS += \
     $(DEVICE_PATH)/sepolicy/vendor
