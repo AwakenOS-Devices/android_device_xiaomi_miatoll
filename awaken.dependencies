@@ -6,7 +6,7 @@
         "branch":       "sc-v2"
     },
     {
-        "remote":       "github",
+        "remote":       "gitlab",
         "repository":   "BladeRunner-A2C/vendor_xiaomi_miatoll",
         "target_path":  "vendor/xiaomi/miatoll",
         "branch":       "sc-v2"
