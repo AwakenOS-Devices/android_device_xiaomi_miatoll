@@ -66,6 +66,18 @@ PRODUCT_SYSTEM_PROPERTIES += \
     audio.offload.min.duration.secs=30 \
     ro.config.vc_call_vol_steps=10
 
+PRODUCT_VENDOR_PROPERTIES += \
+    ro.vendor.audio.spk.clean=true \
+    ro.vendor.audio.soundfx.type=mi \
+    ro.vendor.audio.vocal.support=false \
+    ro.vendor.audio.surround.support=false \
+    ro.vendor.audio.spk.stereo=false \
+    ro.vendor.audio.scenario.support=false \
+    ro.vendor.audio.sfx.scenario=false \
+    ro.vendor.audio.sfx.earadj=false \
+    ro.vendor.audio.soundfx.usb=true \
+    vendor.audio.offload.track.enable=false
+
 # Bluetooth
 PRODUCT_PACKAGES += \
     android.hardware.bluetooth@1.1.vendor \
