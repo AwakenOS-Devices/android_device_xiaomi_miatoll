@@ -30,10 +30,10 @@ namespace light {
 #define LED_PATH(led) "/sys/class/leds/" led "/"
 
 static const std::string led_paths[]{
-        [RED] = LED_PATH("red"),
-        [GREEN] = LED_PATH("green"),
-        [BLUE] = LED_PATH("blue"),
-        [WHITE] = LED_PATH("white"),
+    [RED] = LED_PATH("red"),
+    [GREEN] = LED_PATH("green"),
+    [BLUE] = LED_PATH("blue"),
+    [WHITE] = LED_PATH("white"),
 };
 
 static const std::string kLCDFile = "/sys/class/backlight/panel0-backlight/brightness";
@@ -51,7 +51,7 @@ Lights::Lights() {
 }
 
 // AIDL methods
-ndk::ScopedAStatus Lights::setLightState(int id, const HwLightState& state) {
+ndk::ScopedAStatus Lights::setLightState(int id, const HwLightState &state) {
     switch (id) {
         case (int)LightType::BACKLIGHT:
             WriteToFile(kLCDFile, RgbaToBrightness(state.color));
@@ -72,7 +72,7 @@ ndk::ScopedAStatus Lights::setLightState(int id, const HwLightState& state) {
     return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus Lights::getLights(std::vector<HwLight>* lights) {
+ndk::ScopedAStatus Lights::getLights(std::vector<HwLight> *lights) {
     for (auto i = kAvailableLights.begin(); i != kAvailableLights.end(); i++) {
         lights->push_back(*i);
     }
@@ -80,7 +80,7 @@ ndk::ScopedAStatus Lights::getLights(std::vector<HwLight>* lights) {
 }
 
 // device methods
-void Lights::setSpeakerLightLocked(const HwLightState& state) {
+void Lights::setSpeakerLightLocked(const HwLightState &state) {
     uint32_t alpha, red, green, blue;
     uint32_t blink;
     bool rc = true;
@@ -106,11 +106,15 @@ void Lights::setSpeakerLightLocked(const HwLightState& state) {
             if (mWhiteLed) {
                 rc = setLedBreath(WHITE, blink);
             } else {
-                if (!!red) rc = setLedBreath(RED, blink);
-                if (!!green) rc &= setLedBreath(GREEN, blink);
-                if (!!blue) rc &= setLedBreath(BLUE, blink);
+                if (!!red)
+                    rc = setLedBreath(RED, blink);
+                if (!!green)
+                    rc &= setLedBreath(GREEN, blink);
+                if (!!blue)
+                    rc &= setLedBreath(BLUE, blink);
             }
-            if (rc) break;
+            if (rc)
+                break;
             FALLTHROUGH_INTENDED;
         case FlashMode::NONE:
         default:
@@ -167,7 +171,7 @@ uint32_t Lights::RgbaToBrightness(uint32_t color) {
 }
 
 // Write value to path and close file.
-bool Lights::WriteToFile(const std::string& path, uint32_t content) {
+bool Lights::WriteToFile(const std::string &path, uint32_t content) {
     return WriteStringToFile(std::to_string(content), path);
 }
 
