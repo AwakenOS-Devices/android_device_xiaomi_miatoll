@@ -97,7 +97,7 @@ PRODUCT_PRODUCT_PROPERTIES += \
     persist.vendor.bluetooth.modem_nv_support=true
 
 PRODUCT_VENDOR_PROPERTIES += \
-    persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac \
+    persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac-lc3 \
     persist.bluetooth.a2dp_offload.disabled=false \
     persist.vendor.bt.aac_frm_ctl.enabled=true \
     persist.vendor.qcom.bluetooth.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac-aptxadaptiver2 \
@@ -523,8 +523,9 @@ PRODUCT_PACKAGES += \
     libsensorndkbridge
 
 PRODUCT_VENDOR_PROPERTIES += \
+    persist.vendor.sensors.allow_non_default_discovery=true \
     persist.vendor.sensors.enable.mag_filter=true \
-    persist.vendor.sensors.allow_non_default_discovery=true
+    persist.vendor.sensors.support_direct_channel=false
 
 # Shipping API
 PRODUCT_SHIPPING_API_LEVEL := 29
