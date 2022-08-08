@@ -625,3 +625,19 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_VENDOR_PROPERTIES += \
     wifi.aware.interface=wifi-aware0
+
+# WiFi Display
+PRODUCT_PACKAGES += \
+    libavservices_minijail \
+    libavservices_minijail.vendor \
+    libnl \
+    libwfdaac \
+    libwfdaac_vendor
+
+PRODUCT_BOOT_JARS += \
+    WfdCommon
+
+PRODUCT_SYSTEM_EXT_PROPERTIES += \
+    debug.sf.enable_hwc_vds=1 \
+    persist.debug.wfd.enable=1 \
+    persist.sys.wfd.virtual=0
