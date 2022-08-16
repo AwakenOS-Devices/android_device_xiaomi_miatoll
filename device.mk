@@ -217,9 +217,6 @@ PRODUCT_PACKAGES += \
     android.hardware.gnss@1.1.vendor \
     android.hardware.gnss@2.1.vendor
 
-# GSI keys
-$(call inherit-product, $(SRC_TARGET_DIR)/product/gsi_keys.mk)
-
 # Health
 PRODUCT_PACKAGES += \
     android.hardware.health@2.1-impl \
