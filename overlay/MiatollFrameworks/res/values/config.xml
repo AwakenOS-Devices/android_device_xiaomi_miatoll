@@ -760,8 +760,8 @@
     <array name="config_sfps_sensor_props_0" translatable="false">
         <item></item>
         <item>1080</item>
-        <item>765</item>
-        <item>200</item>
+        <item>871.5</item>
+        <item>115</item>
     </array>
 
     <!-- Whether device has fingerprint on power button -->
