@@ -139,6 +139,10 @@ PRODUCT_VENDOR_PROPERTIES += \
     camera.disable_zsl_mode=1 \
     ro.hardware.camera=xiaomi
 
+# Component overrides
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/component-overrides.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sysconfig/component-overrides.xml
+
 # Charger
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.charger.enable_suspend=true
