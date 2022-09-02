@@ -585,7 +585,13 @@ PRODUCT_SOONG_NAMESPACES += \
 
 PRODUCT_VENDOR_PROPERTIES += \
     persist.vendor.usb.config=mtp,adb \
-    vendor.usb.diag.func.name=diag
+    vendor.usb.diag.func.name=diag \
+    vendor.usb.dpl.inst.name=dpl \
+    vendor.usb.qdss.inst.name=qdss \
+    vendor.usb.rmnet.func.name=gsi \
+    vendor.usb.rmnet.inst.name=rmnet \
+    vendor.usb.rndis.func.name=gsi \
+    vendor.usb.use_gadget_hal=0
 
 # Vendor blobs
 $(call inherit-product, vendor/xiaomi/miatoll/miatoll-vendor.mk)
