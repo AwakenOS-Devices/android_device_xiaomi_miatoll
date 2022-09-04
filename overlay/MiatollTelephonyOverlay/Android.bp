@@ -5,7 +5,7 @@
 //
 
 runtime_resource_overlay {
-    name: "MiatollFrameworks",
+    name: "MiatollTelephonyOverlay",
     sdk_version: "current",
     vendor: true,
 }

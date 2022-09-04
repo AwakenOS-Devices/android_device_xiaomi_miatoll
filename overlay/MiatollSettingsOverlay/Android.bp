@@ -5,7 +5,7 @@
 //
 
 runtime_resource_overlay {
-    name: "MiatollSettings",
+    name: "MiatollSettingsOverlay",
     sdk_version: "current",
     vendor: true,
 }

@@ -5,7 +5,7 @@
 //
 
 runtime_resource_overlay {
-    name: "MiatollCarrierConfig",
+    name: "MiatollCarrierConfigOverlay",
     sdk_version: "current",
     vendor: true,
 }
