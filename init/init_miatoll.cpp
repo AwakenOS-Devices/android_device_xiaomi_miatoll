@@ -138,6 +138,7 @@ void load_dalvik_properties() {
 
 void load_audio_properties() {
     property_override("persist.vendor.audio.voicecall.speaker.stereo", "false");
+    property_override("vendor.audio.offload.track.enable", "false");
 }
 
 void vendor_load_properties() {
