@@ -534,7 +534,7 @@ PRODUCT_SHIPPING_API_LEVEL := 29
 # SoC
 PRODUCT_VENDOR_PROPERTIES += \
     ro.soc.manufacturer=QTI \
-    ro.soc.model=SM6250
+    ro.soc.model=SM7125
 
 # Telephony
 PRODUCT_PACKAGES += \
