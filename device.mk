@@ -68,9 +68,6 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.btconfigstore@1.0.vendor \
     vendor.qti.hardware.btconfigstore@2.0.vendor
 
-PRODUCT_PRODUCT_PROPERTIES += \
-    persist.vendor.bluetooth.modem_nv_support=true
-
 PRODUCT_SYSTEM_EXT_PROPERTIES += \
     bluetooth.device.class_of_device=90,2,12 \
     bluetooth.profile.a2dp.source.enabled=true \
@@ -92,6 +89,7 @@ PRODUCT_SYSTEM_EXT_PROPERTIES += \
 PRODUCT_VENDOR_PROPERTIES += \
     persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac-lc3 \
     persist.bluetooth.a2dp_offload.disabled=false \
+    persist.vendor.bluetooth.modem_nv_support=true \
     persist.vendor.bt.aac_frm_ctl.enabled=true \
     persist.vendor.qcom.bluetooth.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac-aptxadaptiver2 \
     persist.vendor.qcom.bluetooth.aac_frm_ctl.enabled=true \
