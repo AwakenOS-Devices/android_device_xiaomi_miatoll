@@ -540,8 +540,10 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/thermal/thermal-engine-joyeuse.conf:$(TARGET_COPY_OUT_VENDOR)/etc/thermal-engine-joyeuse.conf
 
 # Thermal HAL
+$(call soong_config_set,thermal_hal_feature,pid,apply_1_0)
+
 PRODUCT_PACKAGES += \
-    android.hardware.thermal@2.0-service.xiaomi_miatoll \
+    android.hardware.thermal@2.0-service.miatoll \
     thermal_symlinks
 
 PRODUCT_COPY_FILES += \

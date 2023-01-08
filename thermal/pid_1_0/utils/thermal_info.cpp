@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "thermal_info.h"
+
 #include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/properties.h>
 #include <android-base/strings.h>
-#include <cmath>
-#include <unordered_set>
-
 #include <json/reader.h>
 #include <json/value.h>
 
-#include "config_parser.h"
+#include <cmath>
+#include <unordered_set>
 
 namespace android {
 namespace hardware {
@@ -136,14 +136,13 @@ bool getFloatFromJsonValues(const Json::Value &values, ThrottlingArray *out, boo
 }
 }  // namespace
 
-std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view config_path) {
+bool ParseSensorInfo(std::string_view config_path,
+                     std::unordered_map<std::string, SensorInfo> *sensors_parsed) {
     std::string json_doc;
-    std::unordered_map<std::string, SensorInfo> sensors_parsed;
     if (!android::base::ReadFileToString(config_path.data(), &json_doc)) {
         LOG(ERROR) << "Failed to read JSON config from " << config_path;
-        return sensors_parsed;
+        return false;
     }
-
     Json::Value root;
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
@@ -151,7 +150,7 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
 
     if (!reader->parse(&*json_doc.begin(), &*json_doc.end(), &root, &errorMessage)) {
         LOG(ERROR) << "Failed to parse JSON config: " << errorMessage;
-        return sensors_parsed;
+        return false;
     }
 
     Json::Value sensors = root["Sensors"];
@@ -164,15 +163,15 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         if (name.empty()) {
             LOG(ERROR) << "Failed to read "
                        << "Sensor[" << i << "]'s Name";
-            sensors_parsed.clear();
-            return sensors_parsed;
+            sensors_parsed->clear();
+            return false;
         }
 
         auto result = sensors_name_parsed.insert(name);
         if (!result.second) {
             LOG(ERROR) << "Duplicate Sensor[" << i << "]'s Name";
-            sensors_parsed.clear();
-            return sensors_parsed;
+            sensors_parsed->clear();
+            return false;
         }
 
         std::string sensor_type_str = sensors[i]["Type"].asString();
@@ -182,8 +181,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         if (!getTypeFromString(sensor_type_str, &sensor_type)) {
             LOG(ERROR) << "Invalid "
                        << "Sensor[" << name << "]'s Type: " << sensor_type_str;
-            sensors_parsed.clear();
-            return sensors_parsed;
+            sensors_parsed->clear();
+            return false;
         }
 
         bool send_cb = false;
@@ -202,6 +201,15 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             send_powerhint = true;
         }
         LOG(INFO) << "Sensor[" << name << "]'s SendPowerHint: " << std::boolalpha << send_powerhint
+                  << std::noboolalpha;
+
+        bool is_hidden = false;
+        if (sensors[i]["Hidden"].empty() || !sensors[i]["Hidden"].isBool()) {
+            LOG(INFO) << "Failed to read Sensor[" << name << "]'s Hidden, set to 'false'";
+        } else if (sensors[i]["Hidden"].asBool()) {
+            is_hidden = true;
+        }
+        LOG(INFO) << "Sensor[" << name << "]'s Hidden: " << std::boolalpha << is_hidden
                   << std::noboolalpha;
 
         std::array<float, kThrottlingSeverityCount> hot_thresholds;
@@ -225,11 +233,13 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             is_virtual_sensor = sensors[i]["VirtualSensor"].asBool();
         }
         Json::Value values = sensors[i]["HotThreshold"];
-        if (values.size() != kThrottlingSeverityCount) {
+        if (!values.size()) {
+            LOG(INFO) << "Sensor[" << name << "]'s HotThreshold, default all to NAN";
+        } else if (values.size() != kThrottlingSeverityCount) {
             LOG(ERROR) << "Invalid "
-                       << "Sensor[" << name << "]'s HotThreshold count" << values.size();
-            sensors_parsed.clear();
-            return sensors_parsed;
+                       << "Sensor[" << name << "]'s HotThreshold count:" << values.size();
+            sensors_parsed->clear();
+            return false;
         } else {
             float min = std::numeric_limits<float>::min();
             for (Json::Value::ArrayIndex j = 0; j < kThrottlingSeverityCount; ++j) {
@@ -239,8 +249,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                         LOG(ERROR) << "Invalid "
                                    << "Sensor[" << name << "]'s HotThreshold[j" << j
                                    << "]: " << hot_thresholds[j] << " < " << min;
-                        sensors_parsed.clear();
-                        return sensors_parsed;
+                        sensors_parsed->clear();
+                        return false;
                     }
                     min = hot_thresholds[j];
                 }
@@ -250,27 +260,53 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         }
 
         values = sensors[i]["HotHysteresis"];
-        if (values.size() != kThrottlingSeverityCount) {
-            LOG(INFO) << "Cannot find valid "
-                      << "Sensor[" << name << "]'s HotHysteresis, default all to 0.0";
+        if (!values.size()) {
+            LOG(INFO) << "Sensor[" << name << "]'s HotHysteresis, default all to 0.0";
+        } else if (values.size() != kThrottlingSeverityCount) {
+            LOG(ERROR) << "Invalid "
+                       << "Sensor[" << name << "]'s HotHysteresis, count:" << values.size();
+            sensors_parsed->clear();
+            return false;
         } else {
             for (Json::Value::ArrayIndex j = 0; j < kThrottlingSeverityCount; ++j) {
                 hot_hysteresis[j] = getFloatFromValue(values[j]);
                 if (std::isnan(hot_hysteresis[j])) {
                     LOG(ERROR) << "Invalid "
                                << "Sensor[" << name << "]'s HotHysteresis: " << hot_hysteresis[j];
-                    sensors_parsed.clear();
-                    return sensors_parsed;
+                    sensors_parsed->clear();
+                    return false;
                 }
                 LOG(INFO) << "Sensor[" << name << "]'s HotHysteresis[" << j
                           << "]: " << hot_hysteresis[j];
             }
         }
 
+        for (Json::Value::ArrayIndex j = 0; j < (kThrottlingSeverityCount - 1); ++j) {
+            if (std::isnan(hot_thresholds[j])) {
+                continue;
+            }
+            for (auto k = j + 1; k < kThrottlingSeverityCount; ++k) {
+                if (std::isnan(hot_thresholds[k])) {
+                    continue;
+                } else if (hot_thresholds[j] > (hot_thresholds[k] - hot_hysteresis[k])) {
+                    LOG(ERROR) << "Sensor[" << name << "]'s hot threshold " << j
+                               << " is overlapped";
+                    sensors_parsed->clear();
+                    return false;
+                } else {
+                    break;
+                }
+            }
+        }
+
         values = sensors[i]["ColdThreshold"];
-        if (values.size() != kThrottlingSeverityCount) {
-            LOG(INFO) << "Cannot find valid "
-                      << "Sensor[" << name << "]'s ColdThreshold, default all to NAN";
+        if (!values.size()) {
+            LOG(INFO) << "Sensor[" << name << "]'s ColdThreshold, default all to NAN";
+        } else if (values.size() != kThrottlingSeverityCount) {
+            LOG(ERROR) << "Invalid "
+                       << "Sensor[" << name << "]'s ColdThreshold count:" << values.size();
+            sensors_parsed->clear();
+            return false;
         } else {
             float max = std::numeric_limits<float>::max();
             for (Json::Value::ArrayIndex j = 0; j < kThrottlingSeverityCount; ++j) {
@@ -280,8 +316,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                         LOG(ERROR) << "Invalid "
                                    << "Sensor[" << name << "]'s ColdThreshold[j" << j
                                    << "]: " << cold_thresholds[j] << " > " << max;
-                        sensors_parsed.clear();
-                        return sensors_parsed;
+                        sensors_parsed->clear();
+                        return false;
                     }
                     max = cold_thresholds[j];
                 }
@@ -291,21 +327,42 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         }
 
         values = sensors[i]["ColdHysteresis"];
-        if (values.size() != kThrottlingSeverityCount) {
-            LOG(INFO) << "Cannot find valid "
-                      << "Sensor[" << name << "]'s ColdHysteresis, default all to 0.0";
+        if (!values.size()) {
+            LOG(INFO) << "Sensor[" << name << "]'s ColdHysteresis, default all to 0.0";
+        } else if (values.size() != kThrottlingSeverityCount) {
+            LOG(ERROR) << "Invalid "
+                       << "Sensor[" << name << "]'s ColdHysteresis count:" << values.size();
+            sensors_parsed->clear();
+            return false;
         } else {
             for (Json::Value::ArrayIndex j = 0; j < kThrottlingSeverityCount; ++j) {
                 cold_hysteresis[j] = getFloatFromValue(values[j]);
                 if (std::isnan(cold_hysteresis[j])) {
                     LOG(ERROR) << "Invalid "
-                               << "Sensor[" << name
-                               << "]'s ColdHysteresis: " << cold_hysteresis[j];
-                    sensors_parsed.clear();
-                    return sensors_parsed;
+                               << "Sensor[" << name << "]'s ColdHysteresis: " << cold_hysteresis[j];
+                    sensors_parsed->clear();
+                    return false;
                 }
                 LOG(INFO) << "Sensor[" << name << "]'s ColdHysteresis[" << j
                           << "]: " << cold_hysteresis[j];
+            }
+        }
+
+        for (Json::Value::ArrayIndex j = 0; j < (kThrottlingSeverityCount - 1); ++j) {
+            if (std::isnan(cold_thresholds[j])) {
+                continue;
+            }
+            for (auto k = j + 1; k < kThrottlingSeverityCount; ++k) {
+                if (std::isnan(cold_thresholds[k])) {
+                    continue;
+                } else if (cold_thresholds[j] < (cold_thresholds[k] + cold_hysteresis[k])) {
+                    LOG(ERROR) << "Sensor[" << name << "]'s cold threshold " << j
+                               << " is overlapped";
+                    sensors_parsed->clear();
+                    return false;
+                } else {
+                    break;
+                }
             }
         }
 
@@ -319,8 +376,9 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                               << "]: " << linked_sensors[j];
                 }
             } else {
-                sensors_parsed.clear();
-                return sensors_parsed;
+                LOG(ERROR) << "Sensor[" << name << "] has no combination setting";
+                sensors_parsed->clear();
+                return false;
             }
 
             values = sensors[i]["Coefficient"];
@@ -332,17 +390,20 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                               << "]: " << coefficients[j];
                 }
             } else {
-                sensors_parsed.clear();
-                return sensors_parsed;
+                LOG(ERROR) << "Sensor[" << name << "] has no coefficient setting";
+                sensors_parsed->clear();
+                return false;
+            }
+
+            if (linked_sensors.size() != coefficients.size()) {
+                LOG(ERROR) << "Sensor[" << name
+                           << "]'s combination size is not matched with coefficient size";
+                sensors_parsed->clear();
+                return false;
             }
 
             if (!sensors[i]["Offset"].empty()) {
                 offset = sensors[i]["Offset"].asFloat();
-            }
-
-            if (linked_sensors.size() != coefficients.size()) {
-                sensors_parsed.clear();
-                return sensors_parsed;
             }
 
             trigger_sensor = sensors[i]["TriggerSensor"].asString();
@@ -355,8 +416,9 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             } else if (sensors[i]["Formula"].asString().compare("MINIMUM") == 0) {
                 formula = FormulaOption::MINIMUM;
             } else {
-                sensors_parsed.clear();
-                return sensors_parsed;
+                LOG(ERROR) << "Sensor[" << name << "]'s Formula is invalid";
+                sensors_parsed->clear();
+                return false;
             }
         }
 
@@ -367,27 +429,37 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         }
 
         float vr_threshold = NAN;
-        vr_threshold = getFloatFromValue(sensors[i]["VrThreshold"]);
-        LOG(INFO) << "Sensor[" << name << "]'s VrThreshold: " << vr_threshold;
-
+        if (!sensors[i]["VrThreshold"].empty()) {
+            vr_threshold = getFloatFromValue(sensors[i]["VrThreshold"]);
+            LOG(INFO) << "Sensor[" << name << "]'s VrThreshold: " << vr_threshold;
+        }
         float multiplier = sensors[i]["Multiplier"].asFloat();
         LOG(INFO) << "Sensor[" << name << "]'s Multiplier: " << multiplier;
 
-        std::chrono::milliseconds polling_delay;
-        if (sensors[i]["PollingDelay"].empty()) {
-            polling_delay = kUeventPollTimeoutMs;
-        } else {
-            polling_delay = std::chrono::milliseconds(getIntFromValue(sensors[i]["PollingDelay"]));
+        std::chrono::milliseconds polling_delay = kUeventPollTimeoutMs;
+        if (!sensors[i]["PollingDelay"].empty()) {
+            const auto value = getIntFromValue(sensors[i]["PollingDelay"]);
+            polling_delay = (value > 0) ? std::chrono::milliseconds(value)
+                                        : std::chrono::milliseconds::max();
         }
         LOG(INFO) << "Sensor[" << name << "]'s Polling delay: " << polling_delay.count();
 
-        std::chrono::milliseconds passive_delay;
-        if (sensors[i]["PassiveDelay"].empty()) {
-            passive_delay = kMinPollIntervalMs;
-        } else {
-            passive_delay = std::chrono::milliseconds(getIntFromValue(sensors[i]["PassiveDelay"]));
+        std::chrono::milliseconds passive_delay = kMinPollIntervalMs;
+        if (!sensors[i]["PassiveDelay"].empty()) {
+            const auto value = getIntFromValue(sensors[i]["PassiveDelay"]);
+            passive_delay = (value > 0) ? std::chrono::milliseconds(value)
+                                        : std::chrono::milliseconds::max();
         }
         LOG(INFO) << "Sensor[" << name << "]'s Passive delay: " << passive_delay.count();
+
+        std::chrono::milliseconds time_resolution;
+        if (sensors[i]["TimeResolution"].empty()) {
+            time_resolution = kMinPollIntervalMs;
+        } else {
+            time_resolution =
+                    std::chrono::milliseconds(getIntFromValue(sensors[i]["TimeResolution"]));
+        }
+        LOG(INFO) << "Sensor[" << name << "]'s Time resolution: " << time_resolution.count();
 
         bool support_pid = false;
         std::array<float, kThrottlingSeverityCount> k_po;
@@ -408,6 +480,7 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
         s_power.fill(NAN);
         std::array<float, kThrottlingSeverityCount> i_cutoff;
         i_cutoff.fill(NAN);
+        float err_integral_default = 0.0;
 
         // Parse PID parameters
         if (!sensors[i]["PIDInfo"].empty()) {
@@ -416,40 +489,40 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             if (sensors[i]["PIDInfo"]["K_Po"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["K_Po"], &k_po, false, false)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse K_Po";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s  K_Pu";
             if (sensors[i]["PIDInfo"]["K_Pu"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["K_Pu"], &k_pu, false, false)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse K_Pu";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s K_I";
             if (sensors[i]["PIDInfo"]["K_I"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["K_I"], &k_i, false, false)) {
-                LOG(INFO) << "Sensor[" << name << "]: Failed to parse K_I";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                LOG(ERROR) << "Sensor[" << name << "]: Failed to parse K_I";
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s K_D";
             if (sensors[i]["PIDInfo"]["K_D"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["K_D"], &k_d, false, false)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse K_D";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s I_Max";
             if (sensors[i]["PIDInfo"]["I_Max"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["I_Max"], &i_max, false, false)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse I_Max";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s MaxAllocPower";
@@ -457,8 +530,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["MaxAllocPower"], &max_alloc_power,
                                         false, true)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse MaxAllocPower";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s MinAllocPower";
@@ -466,16 +539,16 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["MinAllocPower"], &min_alloc_power,
                                         false, true)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse MinAllocPower";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s S_Power";
             if (sensors[i]["PIDInfo"]["S_Power"].empty() ||
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["S_Power"], &s_power, false, true)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse S_Power";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
             LOG(INFO) << "Start to parse"
                       << " Sensor[" << name << "]'s I_Cutoff";
@@ -483,9 +556,13 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                 !getFloatFromJsonValues(sensors[i]["PIDInfo"]["I_Cutoff"], &i_cutoff, false,
                                         false)) {
                 LOG(ERROR) << "Sensor[" << name << "]: Failed to parse I_Cutoff";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             }
+            LOG(INFO) << "Start to parse"
+                      << " Sensor[" << name << "]'s E_Integral_Default";
+            err_integral_default = getFloatFromValue(sensors[i]["PIDInfo"]["E_Integral_Default"]);
+            LOG(INFO) << "Sensor[" << name << "]'s E_Integral_Default: " << err_integral_default;
             // Confirm we have at least one valid PID combination
             bool valid_pid_combination = false;
             for (Json::Value::ArrayIndex j = 0; j < kThrottlingSeverityCount; ++j) {
@@ -503,8 +580,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             }
             if (!valid_pid_combination) {
                 LOG(ERROR) << "Sensor[" << name << "]: Invalid PID parameters combinations";
-                sensors_parsed.clear();
-                return sensors_parsed;
+                sensors_parsed->clear();
+                return false;
             } else {
                 support_pid = true;
             }
@@ -521,6 +598,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
             cdev_weight_for_pid.fill(NAN);
             CdevArray cdev_ceiling;
             cdev_ceiling.fill(std::numeric_limits<int>::max());
+            int max_release_step = std::numeric_limits<int>::max();
+            int max_throttle_step = std::numeric_limits<int>::max();
             if (support_pid) {
                 if (!values[j]["CdevWeightForPID"].empty()) {
                     LOG(INFO) << "Sensor[" << name << "]: Star to parse " << cdev_name
@@ -528,8 +607,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                     if (!getFloatFromJsonValues(values[j]["CdevWeightForPID"], &cdev_weight_for_pid,
                                                 false, false)) {
                         LOG(ERROR) << "Failed to parse CdevWeightForPID";
-                        sensors_parsed.clear();
-                        return sensors_parsed;
+                        sensors_parsed->clear();
+                        return false;
                     }
                 }
                 if (!values[j]["CdevCeiling"].empty()) {
@@ -538,8 +617,32 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                     if (!getIntFromJsonValues(values[j]["CdevCeiling"], &cdev_ceiling, false,
                                               false)) {
                         LOG(ERROR) << "Failed to parse CdevCeiling";
-                        sensors_parsed.clear();
-                        return sensors_parsed;
+                        sensors_parsed->clear();
+                        return false;
+                    }
+                }
+                if (!values[j]["MaxReleaseStep"].empty()) {
+                    max_release_step = getIntFromValue(values[j]["MaxReleaseStep"]);
+                    if (max_release_step < 0) {
+                        LOG(ERROR) << "Sensor[" << name << "]'s " << cdev_name
+                                   << " MaxReleaseStep: " << max_release_step;
+                        sensors_parsed->clear();
+                        return false;
+                    } else {
+                        LOG(INFO) << "Sensor[" << name << "]'s " << cdev_name
+                                  << " MaxReleaseStep: " << max_release_step;
+                    }
+                }
+                if (!values[j]["MaxThrottleStep"].empty()) {
+                    max_throttle_step = getIntFromValue(values[j]["MaxThrottleStep"]);
+                    if (max_throttle_step < 0) {
+                        LOG(ERROR) << "Sensor[" << name << "]'s " << cdev_name
+                                   << " MaxThrottleStep: " << max_throttle_step;
+                        sensors_parsed->clear();
+                        return false;
+                    } else {
+                        LOG(INFO) << "Sensor[" << name << "]'s " << cdev_name
+                                  << " MaxThrottleStep: " << max_throttle_step;
                     }
                 }
             }
@@ -555,14 +658,13 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                 LOG(INFO) << "Sensor[" << name << "]: Start to parse LimitInfo: " << cdev_name;
                 if (!getIntFromJsonValues(sub_values, &limit_info, false, false)) {
                     LOG(ERROR) << "Failed to parse LimitInfo";
-                    sensors_parsed.clear();
-                    return sensors_parsed;
+                    sensors_parsed->clear();
+                    return false;
                 }
                 support_hard_limit = true;
             }
 
             // Parse linked power info
-            bool is_power_data_invalid = false;
             std::string power_rail;
             bool high_power_check = false;
             bool throttling_with_power_link = false;
@@ -592,7 +694,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                     if (!getIntFromJsonValues(sub_values, &cdev_floor_with_power_link, false,
                                               false)) {
                         LOG(ERROR) << "Failed to parse CdevFloor";
-                        is_power_data_invalid = true;
+                        sensors_parsed->clear();
+                        return false;
                     }
                 }
                 sub_values = values[j]["PowerThreshold"];
@@ -601,9 +704,9 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                               << "'s PowerThreshold";
                     if (!getFloatFromJsonValues(sub_values, &power_thresholds, false, false)) {
                         LOG(ERROR) << "Failed to parse power thresholds";
-                        is_power_data_invalid = true;
+                        sensors_parsed->clear();
+                        return false;
                     }
-
                     if (values[j]["ReleaseLogic"].asString() == "INCREASE") {
                         release_logic = ReleaseLogic::INCREASE;
                         LOG(INFO) << "Release logic: INCREASE";
@@ -618,13 +721,8 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                         LOG(INFO) << "Release logic: RELEASE_TO_FLOOR";
                     } else {
                         LOG(ERROR) << "Release logic is invalid";
-                        is_power_data_invalid = true;
-                    }
-
-                    if (is_power_data_invalid) {
-                        LOG(ERROR) << cdev_name << "'s power rail " << power_rail << " is invalid";
-                        sensors_parsed.clear();
-                        return sensors_parsed;
+                        sensors_parsed->clear();
+                        return false;
                     }
                 }
             }
@@ -637,13 +735,21 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                     .throttling_with_power_link = throttling_with_power_link,
                     .cdev_weight_for_pid = cdev_weight_for_pid,
                     .cdev_ceiling = cdev_ceiling,
+                    .max_release_step = max_release_step,
+                    .max_throttle_step = max_throttle_step,
                     .cdev_floor_with_power_link = cdev_floor_with_power_link,
                     .power_rail = power_rail,
             };
         }
 
-        bool is_monitor = (send_cb | send_powerhint | support_pid | support_hard_limit);
-        LOG(INFO) << "Sensor[" << name << "]'s Monitor: " << std::boolalpha << is_monitor;
+        if (is_hidden && send_cb) {
+            LOG(ERROR) << "is_hidden and send_cb cannot be enabled together";
+            sensors_parsed->clear();
+            return false;
+        }
+
+        bool is_watch = (send_cb | send_powerhint | support_pid | support_hard_limit);
+        LOG(INFO) << "Sensor[" << name << "]'s is_watch: " << std::boolalpha << is_watch;
 
         std::unique_ptr<VirtualSensorInfo> virtual_sensor_info;
         if (is_virtual_sensor) {
@@ -651,11 +757,11 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                                                             trigger_sensor, formula});
         }
 
-        std::unique_ptr<ThrottlingInfo> throttling_info(
+        std::shared_ptr<ThrottlingInfo> throttling_info(
                 new ThrottlingInfo{k_po, k_pu, k_i, k_d, i_max, max_alloc_power, min_alloc_power,
-                                   s_power, i_cutoff, binded_cdev_info_map});
+                                   s_power, i_cutoff, err_integral_default, binded_cdev_info_map});
 
-        sensors_parsed[name] = {
+        (*sensors_parsed)[name] = {
                 .type = sensor_type,
                 .hot_thresholds = hot_thresholds,
                 .cold_thresholds = cold_thresholds,
@@ -666,36 +772,36 @@ std::unordered_map<std::string, SensorInfo> ParseSensorInfo(std::string_view con
                 .multiplier = multiplier,
                 .polling_delay = polling_delay,
                 .passive_delay = passive_delay,
+                .time_resolution = time_resolution,
                 .send_cb = send_cb,
                 .send_powerhint = send_powerhint,
-                .is_monitor = is_monitor,
+                .is_watch = is_watch,
+                .is_hidden = is_hidden,
                 .virtual_sensor_info = std::move(virtual_sensor_info),
                 .throttling_info = std::move(throttling_info),
         };
 
         ++total_parsed;
     }
-
     LOG(INFO) << total_parsed << " Sensors parsed successfully";
-    return sensors_parsed;
+    return true;
 }
 
-std::unordered_map<std::string, CdevInfo> ParseCoolingDevice(std::string_view config_path) {
+bool ParseCoolingDevice(std::string_view config_path,
+                        std::unordered_map<std::string, CdevInfo> *cooling_devices_parsed) {
     std::string json_doc;
-    std::unordered_map<std::string, CdevInfo> cooling_devices_parsed;
     if (!android::base::ReadFileToString(config_path.data(), &json_doc)) {
         LOG(ERROR) << "Failed to read JSON config from " << config_path;
-        return cooling_devices_parsed;
+        return false;
     }
-
     Json::Value root;
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
     std::string errorMessage;
 
     if (!reader->parse(&*json_doc.begin(), &*json_doc.end(), &root, &errorMessage)) {
-        LOG(ERROR) << "Failed to parse JSON config";
-        return cooling_devices_parsed;
+        LOG(ERROR) << "Failed to parse JSON config: " << errorMessage;
+        return false;
     }
 
     Json::Value cooling_devices = root["CoolingDevices"];
@@ -708,15 +814,15 @@ std::unordered_map<std::string, CdevInfo> ParseCoolingDevice(std::string_view co
         if (name.empty()) {
             LOG(ERROR) << "Failed to read "
                        << "CoolingDevice[" << i << "]'s Name";
-            cooling_devices_parsed.clear();
-            return cooling_devices_parsed;
+            cooling_devices_parsed->clear();
+            return false;
         }
 
         auto result = cooling_devices_name_parsed.insert(name.data());
         if (!result.second) {
             LOG(ERROR) << "Duplicate CoolingDevice[" << i << "]'s Name";
-            cooling_devices_parsed.clear();
-            return cooling_devices_parsed;
+            cooling_devices_parsed->clear();
+            return false;
         }
 
         std::string cooling_device_type_str = cooling_devices[i]["Type"].asString();
@@ -726,8 +832,8 @@ std::unordered_map<std::string, CdevInfo> ParseCoolingDevice(std::string_view co
         if (!getTypeFromString(cooling_device_type_str, &cooling_device_type)) {
             LOG(ERROR) << "Invalid "
                        << "CoolingDevice[" << name << "]'s Type: " << cooling_device_type_str;
-            cooling_devices_parsed.clear();
-            return cooling_devices_parsed;
+            cooling_devices_parsed->clear();
+            return false;
         }
 
         const std::string &read_path = cooling_devices[i]["ReadPath"].asString();
@@ -747,13 +853,13 @@ std::unordered_map<std::string, CdevInfo> ParseCoolingDevice(std::string_view co
             }
         } else {
             LOG(INFO) << "CoolingDevice[" << i << "]'s Name: " << name
-                      << " does not support Power2State";
+                      << " does not support State2Power";
         }
 
         const std::string &power_rail = cooling_devices[i]["PowerRail"].asString();
         LOG(INFO) << "Cooling device power rail : " << power_rail;
 
-        cooling_devices_parsed[name] = {
+        (*cooling_devices_parsed)[name] = {
                 .type = cooling_device_type,
                 .read_path = read_path,
                 .write_path = write_path,
@@ -761,27 +867,25 @@ std::unordered_map<std::string, CdevInfo> ParseCoolingDevice(std::string_view co
         };
         ++total_parsed;
     }
-
     LOG(INFO) << total_parsed << " CoolingDevices parsed successfully";
-    return cooling_devices_parsed;
+    return true;
 }
 
-std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_view config_path) {
+bool ParsePowerRailInfo(std::string_view config_path,
+                        std::unordered_map<std::string, PowerRailInfo> *power_rails_parsed) {
     std::string json_doc;
-    std::unordered_map<std::string, PowerRailInfo> power_rails_parsed;
     if (!android::base::ReadFileToString(config_path.data(), &json_doc)) {
         LOG(ERROR) << "Failed to read JSON config from " << config_path;
-        return power_rails_parsed;
+        return false;
     }
-
     Json::Value root;
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
     std::string errorMessage;
 
     if (!reader->parse(&*json_doc.begin(), &*json_doc.end(), &root, &errorMessage)) {
-        LOG(ERROR) << "Failed to parse JSON config";
-        return power_rails_parsed;
+        LOG(ERROR) << "Failed to parse JSON config: " << errorMessage;
+        return false;
     }
 
     Json::Value power_rails = root["PowerRails"];
@@ -794,8 +898,8 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
         if (name.empty()) {
             LOG(ERROR) << "Failed to read "
                        << "PowerRail[" << i << "]'s Name";
-            power_rails_parsed.clear();
-            return power_rails_parsed;
+            power_rails_parsed->clear();
+            return false;
         }
 
         std::string rail;
@@ -830,8 +934,9 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
                               << "]: " << linked_power_rails[j];
                 }
             } else {
-                power_rails_parsed.clear();
-                return power_rails_parsed;
+                LOG(ERROR) << "PowerRails[" << name << "] has no combination for VirtualRail";
+                power_rails_parsed->clear();
+                return false;
             }
 
             values = power_rails[i]["Coefficient"];
@@ -843,8 +948,16 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
                               << "]: " << coefficients[j];
                 }
             } else {
-                power_rails_parsed.clear();
-                return power_rails_parsed;
+                LOG(ERROR) << "PowerRails[" << name << "] has no coefficient for VirtualRail";
+                power_rails_parsed->clear();
+                return false;
+            }
+
+            if (linked_power_rails.size() != coefficients.size()) {
+                LOG(ERROR) << "PowerRails[" << name
+                           << "]'s combination size is not matched with coefficient size";
+                power_rails_parsed->clear();
+                return false;
             }
 
             if (!power_rails[i]["Offset"].empty()) {
@@ -852,8 +965,10 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
             }
 
             if (linked_power_rails.size() != coefficients.size()) {
-                power_rails_parsed.clear();
-                return power_rails_parsed;
+                LOG(ERROR) << "PowerRails[" << name
+                           << "]'s combination size is not matched with coefficient size";
+                power_rails_parsed->clear();
+                return false;
             }
 
             if (power_rails[i]["Formula"].asString().compare("COUNT_THRESHOLD") == 0) {
@@ -865,8 +980,9 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
             } else if (power_rails[i]["Formula"].asString().compare("MINIMUM") == 0) {
                 formula = FormulaOption::MINIMUM;
             } else {
-                power_rails_parsed.clear();
-                return power_rails_parsed;
+                LOG(ERROR) << "PowerRails[" << name << "]'s Formula is invalid";
+                power_rails_parsed->clear();
+                return false;
             }
         }
 
@@ -886,7 +1002,7 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
                     std::chrono::milliseconds(getIntFromValue(power_rails[i]["PowerSampleDelay"]));
         }
 
-        power_rails_parsed[name] = {
+        (*power_rails_parsed)[name] = {
                 .rail = rail,
                 .power_sample_count = power_sample_count,
                 .power_sample_delay = power_sample_delay,
@@ -894,9 +1010,8 @@ std::unordered_map<std::string, PowerRailInfo> ParsePowerRailInfo(std::string_vi
         };
         ++total_parsed;
     }
-
     LOG(INFO) << total_parsed << " PowerRails parsed successfully";
-    return power_rails_parsed;
+    return true;
 }
 
 }  // namespace implementation
