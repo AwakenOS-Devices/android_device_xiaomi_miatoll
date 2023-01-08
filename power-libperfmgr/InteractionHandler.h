@@ -17,13 +17,13 @@
 #ifndef POWER_LIBPERFMGR_INTERACTIONHANDLER_H_
 #define POWER_LIBPERFMGR_INTERACTIONHANDLER_H_
 
+#include <perfmgr/HintManager.h>
+
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
-
-#include <perfmgr/HintManager.h>
 
 using ::android::perfmgr::HintManager;
 

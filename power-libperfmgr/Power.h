@@ -16,12 +16,12 @@
 
 #pragma once
 
+#include <aidl/android/hardware/power/BnPower.h>
+#include <perfmgr/HintManager.h>
+
 #include <atomic>
 #include <memory>
 #include <thread>
-
-#include <aidl/android/hardware/power/BnPower.h>
-#include <perfmgr/HintManager.h>
 
 #include "InteractionHandler.h"
 

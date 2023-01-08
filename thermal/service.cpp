@@ -15,6 +15,7 @@
  */
 #include <android-base/logging.h>
 #include <hidl/HidlTransportSupport.h>
+
 #include "Thermal.h"
 
 constexpr std::string_view kThermalLogTag("pixel-thermal");

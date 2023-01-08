@@ -5,13 +5,13 @@
  */
 
 #define _REALLY_INCLUDE_SYS__SYSTEM_PROPERTIES_H_
+#include <libinit_utils.h>
 #include <sys/_system_properties.h>
+
 #include <vector>
 
-#include <libinit_utils.h>
-
 void property_override(std::string prop, std::string value, bool add) {
-    auto pi = (prop_info *) __system_property_find(prop.c_str());
+    auto pi = (prop_info *)__system_property_find(prop.c_str());
     if (pi != nullptr) {
         __system_property_update(pi, value.c_str(), value.length());
     } else if (add) {
@@ -20,14 +20,7 @@ void property_override(std::string prop, std::string value, bool add) {
 }
 
 std::vector<std::string> ro_props_default_source_order = {
-    "odm.",
-    "odm_dlkm.",
-    "product.",
-    "system.",
-    "system_ext.",
-    "vendor.",
-    "vendor_dlkm.",
-    "",
+    "odm.", "odm_dlkm.", "product.", "system.", "system_ext.", "vendor.", "vendor_dlkm.", "",
 };
 
 void set_ro_build_prop(const std::string &prop, const std::string &value, bool product) {
@@ -43,12 +36,12 @@ void set_ro_build_prop(const std::string &prop, const std::string &value, bool p
     }
 }
 
-#define FIND_AND_REMOVE(s, delimiter, variable_name) \
+#define FIND_AND_REMOVE(s, delimiter, variable_name)            \
     std::string variable_name = s.substr(0, s.find(delimiter)); \
     s.erase(0, s.find(delimiter) + delimiter.length());
 
 #define APPEND_STRING(s, to_append) \
-    s.append(" "); \
+    s.append(" ");                  \
     s.append(to_append);
 
 std::string fingerprint_to_description(std::string fingerprint) {

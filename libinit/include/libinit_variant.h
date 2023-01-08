@@ -25,4 +25,4 @@ void search_variant(const std::vector<variant_info_t> variants);
 
 void set_variant_props(const variant_info_t variant);
 
-#endif // LIBINIT_VARIANT_H
+#endif  // LIBINIT_VARIANT_H

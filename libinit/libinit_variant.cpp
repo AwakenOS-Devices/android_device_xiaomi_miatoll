@@ -6,7 +6,6 @@
 
 #include <android-base/properties.h>
 #include <libinit_utils.h>
-
 #include <libinit_variant.h>
 
 using android::base::GetProperty;
@@ -19,8 +18,9 @@ void search_variant(const std::vector<variant_info_t> variants) {
     std::string hwc_value = GetProperty(HWC_PROP, "");
     std::string hwname_value = GetProperty(HWNAME_PROP, "");
 
-    for (const auto& variant : variants) {
-        if ((variant.hwc_value == "" || variant.hwc_value == hwc_value) && (variant.device == hwname_value)) {
+    for (const auto &variant : variants) {
+        if ((variant.hwc_value == "" || variant.hwc_value == hwc_value) &&
+            (variant.device == hwname_value)) {
             set_variant_props(variant);
             break;
         }
@@ -35,7 +35,8 @@ void set_variant_props(const variant_info_t variant) {
     set_ro_build_prop("fingerprint", variant.build_fingerprint);
     property_override("ro.bootimage.build.fingerprint", variant.build_fingerprint);
 
-    property_override("ro.build.description", fingerprint_to_description(variant.build_fingerprint));
+    property_override("ro.build.description",
+                      fingerprint_to_description(variant.build_fingerprint));
 
     if (variant.nfc)
         property_override(SKU_PROP, "nfc");

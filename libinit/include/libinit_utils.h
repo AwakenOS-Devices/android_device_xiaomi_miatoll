@@ -15,4 +15,4 @@ void set_ro_build_prop(const std::string &prop, const std::string &value, bool p
 
 std::string fingerprint_to_description(std::string fingerprint);
 
-#endif // LIBINIT_UTILS_H
+#endif  // LIBINIT_UTILS_H

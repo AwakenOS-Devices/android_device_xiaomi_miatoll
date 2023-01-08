@@ -34,11 +34,11 @@ class Lights : public BnLights {
   public:
     Lights();
 
-    ndk::ScopedAStatus setLightState(int id, const HwLightState& state) override;
-    ndk::ScopedAStatus getLights(std::vector<HwLight>* types) override;
+    ndk::ScopedAStatus setLightState(int id, const HwLightState &state) override;
+    ndk::ScopedAStatus getLights(std::vector<HwLight> *types) override;
 
   private:
-    void setSpeakerLightLocked(const HwLightState& state);
+    void setSpeakerLightLocked(const HwLightState &state);
     void handleSpeakerBatteryLocked();
 
     bool setLedBreath(led_type led, uint32_t value);
@@ -46,7 +46,7 @@ class Lights : public BnLights {
 
     bool IsLit(uint32_t color);
     uint32_t RgbaToBrightness(uint32_t color);
-    bool WriteToFile(const std::string& path, uint32_t content);
+    bool WriteToFile(const std::string &path, uint32_t content);
 
     bool mWhiteLed;
     HwLightState mNotification;

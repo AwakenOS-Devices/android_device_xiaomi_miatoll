@@ -20,4 +20,4 @@ typedef struct dalvik_heap_info {
 
 void set_dalvik_heap(void);
 
-#endif // LIBINIT_DALVIK_HEAP_H
+#endif  // LIBINIT_DALVIK_HEAP_H

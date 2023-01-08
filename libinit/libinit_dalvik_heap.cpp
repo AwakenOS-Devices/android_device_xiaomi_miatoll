@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <sys/sysinfo.h>
-#include <libinit_utils.h>
-
 #include <libinit_dalvik_heap.h>
+#include <libinit_utils.h>
+#include <sys/sysinfo.h>
 
 #define HEAPSTARTSIZE_PROP "dalvik.vm.heapstartsize"
 #define HEAPGROWTHLIMIT_PROP "dalvik.vm.heapgrowthlimit"
