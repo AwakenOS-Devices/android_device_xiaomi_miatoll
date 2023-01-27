@@ -581,10 +581,6 @@ $(call inherit-product, vendor/xiaomi/miatoll/miatoll-vendor.mk)
 PRODUCT_PACKAGES += \
     vndservicemanager
 
-# Verify Apps
-PRODUCT_BROKEN_VERIFY_USES_LIBRARIES := true
-RELAX_USES_LIBRARY_CHECK := true
-
 # Vibrator
 PRODUCT_PACKAGES += \
     vendor.qti.hardware.vibrator.service
